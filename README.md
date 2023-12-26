@@ -1,0 +1,2 @@
+# libdmdutil
+DMDUtil communication library
