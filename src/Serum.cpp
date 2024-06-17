@@ -12,7 +12,8 @@ bool Serum::m_isLoaded = false;
 
 Serum::Serum(int width, int height)
 {
-    printf("A");
+      fprintf(stderr, "A\n");
+
   m_width = width;
   m_height = height;
   m_length = width * height;
@@ -27,10 +28,11 @@ Serum::~Serum()
 
 Serum* Serum::Load(const char* const altColorPath, const char* const romName)
 {
-    printf("B");
+      fprintf(stderr, "B\n");
+
   if (m_isLoaded) return nullptr;
 
-printf("C");
+      fprintf(stderr, "C\n");
   int width;
   int height;
   unsigned int numColors;
@@ -38,12 +40,11 @@ printf("C");
 
   if (!Serum_Load(altColorPath, romName, &width, &height, &numColors, &numTriggers))
   {
-    printf("D");
+      fprintf(stderr, "D\n");
     Serum_Dispose();
     return nullptr;
   }
-
-    printf("E");
+      fprintf(stderr, "E\n");
 
   Log(DMDUtil_LogLevel_INFO, "Serum loaded: romName=%s, width=%d, height=%d, numColors=%d, numTriggers=%d", romName,
       width, height, numColors, numTriggers);
