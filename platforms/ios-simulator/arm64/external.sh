@@ -41,13 +41,14 @@ unzip cargs.zip
 cd cargs-${CARGS_SHA}
 cmake \
    -DCMAKE_SYSTEM_NAME=iOS \
+   -DCMAKE_OSX_SYSROOT=iphonesimulator \
    -DCMAKE_OSX_ARCHITECTURES=arm64 \
    -DCMAKE_OSX_DEPLOYMENT_TARGET=17.0 \
    -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
    -B build
 cmake --build build -- -j${NUM_PROCS}
 cp include/cargs.h ../../third-party/include/
-cp build/*.a ../../third-party/build-libs/ios/arm64/
+cp build/*.a ../../third-party/build-libs/ios-simulator/arm64/
 cd ..
 
 #
@@ -57,9 +58,9 @@ cd ..
 curl -sL https://github.com/PPUC/libzedmd/archive/${LIBZEDMD_SHA}.zip -o libzedmd.zip
 unzip libzedmd.zip
 cd libzedmd-$LIBZEDMD_SHA
-platforms/ios/arm64/external.sh
+platforms/ios-simulator/arm64/external.sh
 cmake \
-   -DPLATFORM=ios \
+   -DPLATFORM=ios-simulator \
    -DARCH=arm64 \
    -DBUILD_SHARED=OFF \
    -DBUILD_STATIC=ON \
@@ -67,7 +68,7 @@ cmake \
    -B build
 cmake --build build -- -j${NUM_PROCS}
 cp src/ZeDMD.h ../../third-party/include/
-cp build/libzedmd.a ../../third-party/build-libs/ios/arm64/
+cp build/libzedmd.a ../../third-party/build-libs/ios-simulator/arm64/
 cp -r test ../../
 cd ..
 
@@ -83,11 +84,13 @@ cmake \
    -DARCH=arm64 \
    -DBUILD_SHARED=OFF \
    -DBUILD_STATIC=ON \
+   -DCMAKE_OSX_SYSROOT=iphonesimulator \
+   -DCMAKE_OSX_DEPLOYMENT_TARGET=17.0 \
    -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
    -B build
 cmake --build build -- -j${NUM_PROCS}
 cp src/serum-decode.h ../../third-party/include/
-cp build/libserum.a ../../third-party/build-libs/ios/arm64/
+cp build/libserum.a ../../third-party/build-libs/ios-simulator/arm64/
 cd ..
 
 #
@@ -101,13 +104,14 @@ cmake \
    -DSOCKPP_BUILD_SHARED=OFF \
    -DSOCKPP_BUILD_STATIC=ON \
    -DCMAKE_SYSTEM_NAME=iOS \
+   -DCMAKE_OSX_SYSROOT=iphonesimulator \
    -DCMAKE_OSX_ARCHITECTURES=arm64 \
    -DCMAKE_OSX_DEPLOYMENT_TARGET=17.0 \
    -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
    -B build
 cmake --build build -- -j${NUM_PROCS}
 cp -r include/sockpp ../../third-party/include/
-cp build/libsockpp.a ../../third-party/build-libs/ios/arm64/
+cp build/libsockpp.a ../../third-party/build-libs/ios-simulator/arm64/
 cd ..
 
 #
@@ -118,7 +122,7 @@ curl -sL https://github.com/ppuc/libpupdmd/archive/${LIBPUPDMD_SHA}.zip -o libpu
 unzip libpupdmd.zip
 cd libpupdmd-$LIBPUPDMD_SHA
 cmake \
-   -DPLATFORM=ios \
+   -DPLATFORM=ios-simulator \
    -DARCH=arm64 \
    -DBUILD_SHARED=OFF \
    -DBUILD_STATIC=ON \
@@ -126,7 +130,7 @@ cmake \
    -B build
 cmake --build build -- -j${NUM_PROCS}
 cp src/pupdmd.h ../../third-party/include/
-cp build/libpupdmd.a ../../third-party/build-libs/ios/arm64/
+cp build/libpupdmd.a ../../third-party/build-libs/ios-simulator/arm64/
 cd ..
 
 #
