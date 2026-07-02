@@ -39,94 +39,102 @@ cd ..
 # build libzedmd and copy to external
 #
 
-curl -sL https://github.com/PPUC/libzedmd/archive/${LIBZEDMD_SHA}.tar.gz -o libzedmd-${LIBZEDMD_SHA}.tar.gz
-tar xzf libzedmd-${LIBZEDMD_SHA}.tar.gz
-mv libzedmd-${LIBZEDMD_SHA} libzedmd
-cd libzedmd
-BUILD_TYPE=${BUILD_TYPE} platforms/linux/x64/external.sh
-cmake \
-   -DPLATFORM=linux \
-   -DARCH=x64 \
-   -DBUILD_SHARED=ON \
-   -DBUILD_STATIC=OFF \
-   -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
-   -B build
-cmake --build build -- -j${NUM_PROCS}
-cp src/ZeDMD.h ../../third-party/include/
-cp third-party/include/libserialport.h ../../third-party/include/
-cp third-party/include/cargs.h ../../third-party/include/
-cp -r third-party/include/komihash ../../third-party/include/
-cp -r third-party/include/sockpp ../../third-party/include/
-cp third-party/include/FrameUtil.h ../../third-party/include/
-cp third-party/runtime-libs/linux/x64/libcargs.so ../../third-party/runtime-libs/linux/x64/
-cp -a third-party/runtime-libs/linux/x64/libserialport.{so,so.*} ../../third-party/runtime-libs/linux/x64/
-cp -a third-party/runtime-libs/linux/x64/libsockpp.{so,so.*} ../../third-party/runtime-libs/linux/x64/
-cp -a build/libzedmd.{so,so.*} ../../third-party/runtime-libs/linux/x64/
-cp -r test ../../
-cd ..
+if ! use_prebuilt_source libzedmd; then
+   curl -sL https://github.com/PPUC/libzedmd/archive/${LIBZEDMD_SHA}.tar.gz -o libzedmd-${LIBZEDMD_SHA}.tar.gz
+   tar xzf libzedmd-${LIBZEDMD_SHA}.tar.gz
+   mv libzedmd-${LIBZEDMD_SHA} libzedmd
+   cd libzedmd
+   BUILD_TYPE=${BUILD_TYPE} platforms/linux/x64/external.sh
+   cmake \
+      -DPLATFORM=linux \
+      -DARCH=x64 \
+      -DBUILD_SHARED=ON \
+      -DBUILD_STATIC=OFF \
+      -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+      -B build
+   cmake --build build -- -j${NUM_PROCS}
+fi
+cp src/ZeDMD.h ${SOURCE_ROOT}/third-party/include/
+cp third-party/include/libserialport.h ${SOURCE_ROOT}/third-party/include/
+cp third-party/include/cargs.h ${SOURCE_ROOT}/third-party/include/
+cp -r third-party/include/komihash ${SOURCE_ROOT}/third-party/include/
+cp -r third-party/include/sockpp ${SOURCE_ROOT}/third-party/include/
+cp third-party/include/FrameUtil.h ${SOURCE_ROOT}/third-party/include/
+cp third-party/runtime-libs/linux/x64/libcargs.so ${SOURCE_ROOT}/third-party/runtime-libs/linux/x64/
+cp -a third-party/runtime-libs/linux/x64/libserialport.{so,so.*} ${SOURCE_ROOT}/third-party/runtime-libs/linux/x64/
+cp -a third-party/runtime-libs/linux/x64/libsockpp.{so,so.*} ${SOURCE_ROOT}/third-party/runtime-libs/linux/x64/
+cp -a build/libzedmd.{so,so.*} ${SOURCE_ROOT}/third-party/runtime-libs/linux/x64/
+cp -r test ${SOURCE_ROOT}/
+cd "${SOURCE_ROOT}/external"
 
 #
 # build libserum and copy to external
 #
 
-curl -sL https://github.com/PPUC/libserum/archive/${LIBSERUM_SHA}.tar.gz -o libserum-${LIBSERUM_SHA}.tar.gz
-tar xzf libserum-${LIBSERUM_SHA}.tar.gz
-mv libserum-${LIBSERUM_SHA} libserum
-cd libserum
-cmake \
-   -DPLATFORM=linux \
-   -DARCH=x64 \
-   -DBUILD_SHARED=ON \
-   -DBUILD_STATIC=OFF \
-   -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
-   -B build
-cmake --build build -- -j${NUM_PROCS}
-cp -r third-party/include/lz4 ../../third-party/include/
-cp src/LZ4Stream.h ../../third-party/include/
-cp src/SceneGenerator.h ../../third-party/include/
-cp src/serum.h ../../third-party/include/
-cp src/TimeUtils.h ../../third-party/include/
-cp src/serum-decode.h ../../third-party/include/
-cp -a build/libserum.{so,so.*} ../../third-party/runtime-libs/linux/x64/
-cd ..
+if ! use_prebuilt_source libserum; then
+   curl -sL https://github.com/PPUC/libserum/archive/${LIBSERUM_SHA}.tar.gz -o libserum-${LIBSERUM_SHA}.tar.gz
+   tar xzf libserum-${LIBSERUM_SHA}.tar.gz
+   mv libserum-${LIBSERUM_SHA} libserum
+   cd libserum
+   cmake \
+      -DPLATFORM=linux \
+      -DARCH=x64 \
+      -DBUILD_SHARED=ON \
+      -DBUILD_STATIC=OFF \
+      -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+      -B build
+   cmake --build build -- -j${NUM_PROCS}
+fi
+cp -r third-party/include/lz4 ${SOURCE_ROOT}/third-party/include/
+cp src/LZ4Stream.h ${SOURCE_ROOT}/third-party/include/
+cp src/SceneGenerator.h ${SOURCE_ROOT}/third-party/include/
+cp src/serum.h ${SOURCE_ROOT}/third-party/include/
+cp src/TimeUtils.h ${SOURCE_ROOT}/third-party/include/
+cp src/serum-decode.h ${SOURCE_ROOT}/third-party/include/
+cp -a build/libserum.{so,so.*} ${SOURCE_ROOT}/third-party/runtime-libs/linux/x64/
+cd "${SOURCE_ROOT}/external"
 
 #
 # build libpupdmd and copy to external
 #
 
-curl -sL https://github.com/PPUC/libpupdmd/archive/${LIBPUPDMD_SHA}.tar.gz -o libpupdmd-${LIBPUPDMD_SHA}.tar.gz
-tar xzf libpupdmd-${LIBPUPDMD_SHA}.tar.gz
-mv libpupdmd-${LIBPUPDMD_SHA} libpupdmd
-cd libpupdmd
-cmake \
-   -DPLATFORM=linux \
-   -DARCH=x64 \
-   -DBUILD_SHARED=ON \
-   -DBUILD_STATIC=OFF \
-   -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
-   -B build
-cmake --build build -- -j${NUM_PROCS}
-cp src/pupdmd.h ../../third-party/include/
-cp -a build/libpupdmd.{so,so.*} ../../third-party/runtime-libs/linux/x64/
-cd ..
+if ! use_prebuilt_source libpupdmd; then
+   curl -sL https://github.com/PPUC/libpupdmd/archive/${LIBPUPDMD_SHA}.tar.gz -o libpupdmd-${LIBPUPDMD_SHA}.tar.gz
+   tar xzf libpupdmd-${LIBPUPDMD_SHA}.tar.gz
+   mv libpupdmd-${LIBPUPDMD_SHA} libpupdmd
+   cd libpupdmd
+   cmake \
+      -DPLATFORM=linux \
+      -DARCH=x64 \
+      -DBUILD_SHARED=ON \
+      -DBUILD_STATIC=OFF \
+      -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+      -B build
+   cmake --build build -- -j${NUM_PROCS}
+fi
+cp src/pupdmd.h ${SOURCE_ROOT}/third-party/include/
+cp -a build/libpupdmd.{so,so.*} ${SOURCE_ROOT}/third-party/runtime-libs/linux/x64/
+cd "${SOURCE_ROOT}/external"
 
 #
 # build libvni and copy to external
 #
 
-curl -sL https://github.com/PPUC/libvni/archive/${LIBVNI_SHA}.tar.gz -o libvni-${LIBVNI_SHA}.tar.gz
-tar xzf libvni-${LIBVNI_SHA}.tar.gz
-mv libvni-${LIBVNI_SHA} libvni
-cd libvni
-platforms/linux/x64/external.sh
-cmake \
-   -DPLATFORM=linux \
-   -DARCH=x64 \
-   -DBUILD_SHARED=ON \
-   -DBUILD_STATIC=OFF \
-   -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
-   -B build
-cmake --build build -- -j${NUM_PROCS}
-cp src/vni.h ../../third-party/include/
-cp -a build/libvni.{so,so.*} ../../third-party/runtime-libs/linux/x64/
-cd ..
+if ! use_prebuilt_source libvni; then
+   curl -sL https://github.com/PPUC/libvni/archive/${LIBVNI_SHA}.tar.gz -o libvni-${LIBVNI_SHA}.tar.gz
+   tar xzf libvni-${LIBVNI_SHA}.tar.gz
+   mv libvni-${LIBVNI_SHA} libvni
+   cd libvni
+   platforms/linux/x64/external.sh
+   cmake \
+      -DPLATFORM=linux \
+      -DARCH=x64 \
+      -DBUILD_SHARED=ON \
+      -DBUILD_STATIC=OFF \
+      -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+      -B build
+   cmake --build build -- -j${NUM_PROCS}
+fi
+cp src/vni.h ${SOURCE_ROOT}/third-party/include/
+cp -a build/libvni.{so,so.*} ${SOURCE_ROOT}/third-party/runtime-libs/linux/x64/
+cd "${SOURCE_ROOT}/external"
