@@ -55,10 +55,31 @@ void DMDServer::Stop()
     m_acceptThread = nullptr;
   }
 
+  ReapClientThreads(true);
+
   std::unique_lock<std::mutex> lock(m_threadMutex);
   m_currentThreadId = 0;
   m_disconnectOtherClients = 0;
   lock.unlock();
+}
+
+void DMDServer::ReapClientThreads(bool all)
+{
+  std::vector<std::thread> finished;
+  {
+    std::lock_guard<std::mutex> lock(m_threadMutex);
+    for (auto it = m_clientThreads.begin(); it != m_clientThreads.end();)
+    {
+      if (all || std::find(m_threads.begin(), m_threads.end(), it->first) == m_threads.end())
+      {
+        finished.push_back(std::move(it->second));
+        it = m_clientThreads.erase(it);
+      }
+      else
+        ++it;
+    }
+  }
+  for (std::thread& thread : finished) thread.join();
 }
 
 void DMDServer::AcceptLoop()
@@ -82,13 +103,13 @@ void DMDServer::AcceptLoop()
       continue;
     }
 
+    ReapClientThreads(false);
+
     std::unique_lock<std::mutex> lock(m_threadMutex);
     m_currentThreadId = ++threadId;
     m_threads.push_back(m_currentThreadId);
+    m_clientThreads.emplace_back(m_currentThreadId, std::thread(&DMDServer::ClientThread, this, std::move(sock), m_currentThreadId));
     lock.unlock();
-
-    std::thread thr(&DMDServer::ClientThread, this, std::move(sock), m_currentThreadId);
-    thr.detach();
   }
 }
 
