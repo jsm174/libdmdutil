@@ -814,12 +814,15 @@ void DMD::DMDServerThread()
 
 bool DMD::QueueBuffer()
 {
-  if (m_hasUpdateBuffered)
+  std::shared_ptr<Update> dmdUpdate;
   {
-    QueueUpdate(m_updateBuffered, false);
+    std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
+    if (!m_hasUpdateBuffered) return false;
+    dmdUpdate = std::make_shared<Update>(*m_updateBuffered);
   }
 
-  return m_hasUpdateBuffered;
+  QueueUpdate(dmdUpdate, false);
+  return true;
 }
 
 void DMD::UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b,
