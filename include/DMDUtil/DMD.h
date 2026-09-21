@@ -301,6 +301,7 @@ class DMDUTILAPI DMD
   void PupDMDThread();
   void SerumThread();
   void VniThread();
+  void DMDServerThread();
 
   char m_romName[DMDUTIL_MAX_NAME_SIZE] = {0};
   char m_altColorPath[DMDUTIL_MAX_PATH_SIZE] = {0};
@@ -316,6 +317,10 @@ class DMDUTILAPI DMD
   std::vector<ConsoleDMD*> m_consoleDMDs;
   DMDServerConnector* m_pDMDServerConnector;
   bool m_dmdServerDisconnectOthers = false;
+  std::thread m_dmdServerThread;
+  std::mutex m_dmdServerQueueMutex;
+  std::condition_variable m_dmdServerQueueCV;
+  std::queue<std::pair<std::shared_ptr<Update>, bool>> m_dmdServerQueue;
 
   std::thread* m_pLevelDMDThread;
   std::thread* m_pRGB24DMDThread;

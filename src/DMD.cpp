@@ -337,6 +337,8 @@ DMD::~DMD()
   m_stopFlag.store(true, std::memory_order_release);
   ul.unlock();
   m_dmdCV.notify_all();
+  m_dmdServerQueueCV.notify_all();
+  if (m_dmdServerThread.joinable()) m_dmdServerThread.join();
 
   Log(DMDUtil_LogLevel_INFO, "DMD destructor: joining DmdFrameThread");
   if (m_pDmdFrameThread->joinable())
@@ -513,6 +515,10 @@ bool DMD::ConnectDMDServer()
     {
       Log(DMDUtil_LogLevel_INFO, "DMDServer connection to %s:%d failed!", pConfig->GetDMDServerAddr(),
           pConfig->GetDMDServerPort());
+    }
+    else if (!m_dmdServerThread.joinable())
+    {
+      m_dmdServerThread = std::thread(&DMD::DMDServerThread, this);
     }
   }
   return (m_pDMDServerConnector);
@@ -744,52 +750,66 @@ void DMD::UpdateDataWithTimestampInternal(const uint8_t* pData, int depth, uint1
 void DMD::QueueUpdate(const std::shared_ptr<Update> dmdUpdate, bool buffered, bool hasTimestamp, uint32_t timestampMs,
                       const FrameContext* frameContext)
 {
-  const FrameContext frameContextCopy = frameContext ? *frameContext : FrameContext{};
-  std::thread(
-      [this, dmdUpdate, buffered, hasTimestamp, timestampMs, frameContextCopy]()
-      {
-        std::unique_lock<std::shared_mutex> ul(m_dmdSharedMutex);
-        uint16_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
-        uint8_t slot = (++updateBufferQueuePosition) % DMDUTIL_FRAME_BUFFER_SIZE;
-        memcpy(m_pUpdateBufferQueue[slot], dmdUpdate.get(), sizeof(Update));
-        m_updateBufferQueueHasTimestamp[slot] = hasTimestamp;
-        m_updateBufferQueueTimestamp[slot] = timestampMs;
-        m_updateBufferQueueFrameContext[slot] = frameContextCopy;
-        m_updateBufferQueuePosition.store(updateBufferQueuePosition, std::memory_order_release);
+  std::unique_lock<std::shared_mutex> ul(m_dmdSharedMutex);
+  uint16_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
+  uint8_t slot = (++updateBufferQueuePosition) % DMDUTIL_FRAME_BUFFER_SIZE;
+  memcpy(m_pUpdateBufferQueue[slot], dmdUpdate.get(), sizeof(Update));
+  m_updateBufferQueueHasTimestamp[slot] = hasTimestamp;
+  m_updateBufferQueueTimestamp[slot] = timestampMs;
+  m_updateBufferQueueFrameContext[slot] = frameContext ? *frameContext : FrameContext{};
+  m_updateBufferQueuePosition.store(updateBufferQueuePosition, std::memory_order_release);
 
-        Log(DMDUtil_LogLevel_DEBUG, "Queued Frame: position=%d, mode=%d, depth=%d", updateBufferQueuePosition,
-            dmdUpdate->mode, dmdUpdate->depth);
+  Log(DMDUtil_LogLevel_DEBUG, "Queued Frame: position=%d, mode=%d, depth=%d", updateBufferQueuePosition,
+      dmdUpdate->mode, dmdUpdate->depth);
 
-        if (buffered)
-        {
-          memcpy(m_updateBuffered.get(), dmdUpdate.get(), sizeof(Update));
-          m_hasUpdateBuffered = true;
-        }
+  if (buffered)
+  {
+    memcpy(m_updateBuffered.get(), dmdUpdate.get(), sizeof(Update));
+    m_hasUpdateBuffered = true;
+  }
 
-        ul.unlock();
-        m_dmdCV.notify_all();
+  ul.unlock();
+  m_dmdCV.notify_all();
 
-        const bool sendToDMDServer = !IsSerumMode(dmdUpdate->mode) || dmdUpdate->mode == Mode::SerumCommand;
-        if (m_pDMDServerConnector && sendToDMDServer)
-        {
-          StreamHeader streamHeader;
-          streamHeader.buffered = (uint8_t)buffered;
-          streamHeader.disconnectOthers = (uint8_t)m_dmdServerDisconnectOthers;
-          streamHeader.convertToNetworkByteOrder();
-          m_pDMDServerConnector->Write(&streamHeader, sizeof(StreamHeader));
-          PathsHeader pathsHeader;
-          strcpy(pathsHeader.name, m_romName);
-          strcpy(pathsHeader.altColorPath, m_altColorPath);
-          strcpy(pathsHeader.pupVideosPath, m_pupVideosPath);
-          pathsHeader.convertToNetworkByteOrder();
-          m_pDMDServerConnector->Write(&pathsHeader, sizeof(PathsHeader));
-          Update dmdUpdateNetwork = dmdUpdate->toNetworkByteOrder();
-          m_pDMDServerConnector->Write(&dmdUpdateNetwork, sizeof(Update));
+  const bool sendToDMDServer = !IsSerumMode(dmdUpdate->mode) || dmdUpdate->mode == Mode::SerumCommand;
+  if (m_pDMDServerConnector && sendToDMDServer)
+  {
+    std::lock_guard<std::mutex> lock(m_dmdServerQueueMutex);
+    m_dmdServerQueue.emplace(dmdUpdate, buffered);
+    m_dmdServerQueueCV.notify_one();
+  }
+}
 
-          if (streamHeader.disconnectOthers != 0) m_dmdServerDisconnectOthers = false;
-        }
-      })
-      .detach();
+void DMD::DMDServerThread()
+{
+  while (true)
+  {
+    std::unique_lock<std::mutex> lock(m_dmdServerQueueMutex);
+    m_dmdServerQueueCV.wait(lock,
+                            [&]() { return m_stopFlag.load(std::memory_order_relaxed) || !m_dmdServerQueue.empty(); });
+    if (m_stopFlag.load(std::memory_order_acquire)) return;
+
+    const std::shared_ptr<Update> dmdUpdate = m_dmdServerQueue.front().first;
+    const bool buffered = m_dmdServerQueue.front().second;
+    m_dmdServerQueue.pop();
+    lock.unlock();
+
+    StreamHeader streamHeader;
+    streamHeader.buffered = (uint8_t)buffered;
+    streamHeader.disconnectOthers = (uint8_t)m_dmdServerDisconnectOthers;
+    streamHeader.convertToNetworkByteOrder();
+    m_pDMDServerConnector->Write(&streamHeader, sizeof(StreamHeader));
+    PathsHeader pathsHeader;
+    strcpy(pathsHeader.name, m_romName);
+    strcpy(pathsHeader.altColorPath, m_altColorPath);
+    strcpy(pathsHeader.pupVideosPath, m_pupVideosPath);
+    pathsHeader.convertToNetworkByteOrder();
+    m_pDMDServerConnector->Write(&pathsHeader, sizeof(PathsHeader));
+    Update dmdUpdateNetwork = dmdUpdate->toNetworkByteOrder();
+    m_pDMDServerConnector->Write(&dmdUpdateNetwork, sizeof(Update));
+
+    if (streamHeader.disconnectOthers != 0) m_dmdServerDisconnectOthers = false;
+  }
 }
 
 bool DMD::QueueBuffer()
