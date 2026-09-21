@@ -332,6 +332,7 @@ DMD::DMD()
 DMD::~DMD()
 {
   Log(DMDUtil_LogLevel_INFO, "DMD destructor start");
+  if (m_findDisplaysThread.joinable()) m_findDisplaysThread.join();
   std::unique_lock<std::shared_mutex> ul(m_dmdSharedMutex);
   m_stopFlag.store(true, std::memory_order_release);
   ul.unlock();
@@ -1031,7 +1032,8 @@ void DMD::FindDisplays()
   {
     m_finding.store(true, std::memory_order_release);
 
-    std::thread(
+    if (m_findDisplaysThread.joinable()) m_findDisplaysThread.join();
+    m_findDisplaysThread = std::thread(
         [this]()
         {
           Config* const pConfig = Config::GetInstance();
@@ -1150,8 +1152,7 @@ void DMD::FindDisplays()
 #endif
 
           m_finding.store(false, std::memory_order_release);
-        })
-        .detach();
+        });
   }
 }
 

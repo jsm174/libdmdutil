@@ -327,6 +327,7 @@ class DMDUTILAPI DMD
   std::thread* m_pDumpDMDRgb565Thread;
   std::thread* m_pDumpDMDRgb888Thread;
   std::thread* m_pPupDMDThread;
+  std::thread m_findDisplaysThread;
   std::thread* m_pSerumThread;
   std::thread* m_pVniThread;
   std::shared_mutex m_dmdSharedMutex;
